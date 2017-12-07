@@ -12,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import com.esri.android.map.MapView;
+import com.esri.core.geometry.Geometry;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.uimanager.SimpleViewManager;
@@ -28,9 +29,11 @@ import java.util.Map;
  */
 
 public class ArcgisMapView extends SimpleViewManager<MapView> {
-    public static final String REACT_CLASS = "RCTArcgisMapView";
     private ThemedReactContext _context;
+
+    public static final String REACT_CLASS = "RCTArcgisMapView";
     public MapView _MapView;
+    public MapTouchListener _MapTouchListener;
 
     @Override
     public String getName() {
@@ -43,6 +46,9 @@ public class ArcgisMapView extends SimpleViewManager<MapView> {
         _MapView = new MapView(reactContext);
         TianDiTuTiledMapServiceLayer mapBase = new TianDiTuTiledMapServiceLayer("http://www.scgis.net.cn/iMap/iMapServer/DefaultRest/services/newtianditudlg", "");
         _MapView.addLayer(mapBase);
+
+        // 注册点击事件
+        _MapTouchListener = new MapTouchListener(_context, _MapView);
         return _MapView;
     }
 
@@ -123,15 +129,27 @@ public class ArcgisMapView extends SimpleViewManager<MapView> {
             }
             break;
             case COMMAND_LENGTH: {
-                view.zoomout(false);
+//                view.zoomout(false);
+                _MapTouchListener.clearDrawLayer();
+                _MapTouchListener.createDrawLayer();
+
+                // 设置激活 画线
+                _MapTouchListener.setType(Geometry.Type.POLYLINE);
             }
             break;
             case COMMAND_AREA: {
-                view.zoomin(true);
+//                view.zoomin(true);
+                _MapTouchListener.clearDrawLayer();
+                _MapTouchListener.createDrawLayer();
+
+                // 设置激活 画线
+                _MapTouchListener.setType(Geometry.Type.POLYGON);
             }
             break;
         }
     }
+
+
 
 
 }

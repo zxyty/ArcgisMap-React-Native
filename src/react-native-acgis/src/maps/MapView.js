@@ -138,7 +138,7 @@ class MapView extends Component {
           source={require('./images/mapclear.png')}
         />
         {/* // 测量距离 */}
-        <Image
+        <TouchableHighlight
           style={{
             position: 'absolute',
             right: 10,
@@ -146,11 +146,16 @@ class MapView extends Component {
             height: 35,
             width: 35
           }}
-          source={require('./images/maplength.png')}
-        />
-
+          onPress={() => {
+            this.refs.mapview._sendCommand('length', null);
+          }}
+        >
+          <Image
+            source={require('./images/maplength.png')}
+          />
+        </TouchableHighlight>
         {/* // 测量面积 */}
-        <Image
+        <TouchableHighlight
           style={{
             position: 'absolute',
             right: 10,
@@ -158,8 +163,14 @@ class MapView extends Component {
             height: 35,
             width: 35
           }}
+          onPress={() => {
+            this.refs.mapview._sendCommand('area', null);
+          }}
+        >
+        <Image
           source={require('./images/maparea.png')}
         />
+        </TouchableHighlight>
       </View>
     );
   }
