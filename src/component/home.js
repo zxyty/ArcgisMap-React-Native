@@ -9,6 +9,7 @@ import {
 import { connect } from 'react-redux';
 import { action } from '../redux/action/index.js';
 import MapView, { ImageButton } from '../react-native-acgis/src/index';
+// import MapView, { ImageButton } from '../react-native-acgis/src/index';
 // 计划审批
 class Home extends Component {
 
@@ -24,7 +25,16 @@ class Home extends Component {
             htmlStr = '有数据ss';
         }
         return (
-            <MapView />
+            <MapView style={{
+                position: 'relative'
+            }}>
+                <Text style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    zIndex: 999
+                }}>{htmlStr}</Text>
+            </MapView>
         );
     }
 }

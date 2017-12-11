@@ -1,244 +1,301 @@
-
 package com.sisdanger.maps;
-import android.util.Log;
 
-import com.esri.android.map.TiledServiceLayer;
-import com.esri.core.geometry.Envelope;
-import com.esri.core.geometry.Point;
-import com.esri.core.geometry.SpatialReference;
+import com.esri.arcgisruntime.arcgisservices.LevelOfDetail;
+import com.esri.arcgisruntime.arcgisservices.TileInfo;
+import com.esri.arcgisruntime.geometry.Envelope;
+import com.esri.arcgisruntime.geometry.Point;
+import com.esri.arcgisruntime.geometry.SpatialReference;
+import com.esri.arcgisruntime.layers.WebTiledLayer;
 
-import org.json.JSONException;
-
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
- * Created by zxt on 2017/5/12.
+ * Created by zxy on 2017/12/11.
  */
 
-public class TianDiTuTiledMapServiceLayer extends TiledServiceLayer {
-    private TileInfo tiandituTileInfo;
-    private String mUrl;
-    private String mUnit;
+public class TianDiTuTiledMapServiceLayer  {
+    private static final List<String> SubDomain = Arrays.asList(new String [] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"});
+    private static final String URL_VECTOR_2000 = "http://{subDomain}.tianditu.com/DataServer?T=vec_c&x={col}&y={row}&l={level}";
+    private static final String URL_VECTOR_ANNOTATION_CHINESE_2000 = "http://{subDomain}.tianditu.com/DataServer?T=cva_c&x={col}&y={row}&l={level}";
+    private static final String URL_VECTOR_ANNOTATION_ENGLISH_2000 = "http://{subDomain}.tianditu.com/DataServer?T=eva_c&x={col}&y={row}&l={level}";
+    private static final String URL_IMAGE_2000 = "http://{subDomain}.tianditu.com/DataServer?T=img_c&x={col}&y={row}&l={level}";
+    private static final String URL_IMAGE_ANNOTATION_CHINESE_2000 = "http://{subDomain}.tianditu.com/DataServer?T=cia_c&x={col}&y={row}&l={level}";
+    private static final String URL_IMAGE_ANNOTATION_ENGLISH_2000 = "http://{subDomain}.tianditu.com/DataServer?T=eia_c&x={col}&y={row}&l={level}";
+    private static final String URL_TERRAIN_2000 = "http://{subDomain}.tianditu.com/DataServer?T=ter_c&x={col}&y={row}&l={level}";
+    private static final String URL_TERRAIN_ANNOTATION_CHINESE_2000 = "http://{subDomain}.tianditu.com/DataServer?T=cta_c&x={col}&y={row}&l={level}";
 
-    public TianDiTuTiledMapServiceLayer() {
-        this("", "");
-    }
+    private static final String URL_VECTOR_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=vec_w&x={col}&y={row}&l={level}";
+    private static final String URL_VECTOR_ANNOTATION_CHINESE_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=cva_w&x={col}&y={row}&l={level}";
+    private static final String URL_VECTOR_ANNOTATION_ENGLISH_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=eva_w&x={col}&y={row}&l={level}";
+    private static final String URL_IMAGE_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=img_w&x={col}&y={row}&l={level}";
+    private static final String URL_IMAGE_ANNOTATION_CHINESE_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=cia_w&x={col}&y={row}&l={level}";
+    private static final String URL_IMAGE_ANNOTATION_ENGLISH_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=eia_w&x={col}&y={row}&l={level}";
+    private static final String URL_TERRAIN_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=ter_w&x={col}&y={row}&l={level}";
+    private static final String URL_TERRAIN_ANNOTATION_CHINESE_MERCATOR = "http://{subDomain}.tianditu.com/DataServer?T=cta_w&x={col}&y={row}&l={level}";
 
-    public TianDiTuTiledMapServiceLayer(String url, String Unit) {
-        super("");
-        mUrl = url;
-        mUnit = Unit;
-        try {
-            getServiceExecutor().submit(new Runnable() {
+    private static final int DPI = 96;
+    private static final int minZoomLevel = 1;
+    private static final int maxZoomLevel = 18;
+    private static final int tileWidth = 256;
+    private static final int tileHeight = 256;
+    private static final String LAYER_NAME_VECTOR = "vec";
+    private static final String LAYER_NAME_VECTOR_ANNOTATION_CHINESE = "cva";
+    private static final String LAYER_NAME_VECTOR_ANNOTATION_ENGLISH = "eva";
+    private static final String LAYER_NAME_IMAGE = "img";
+    private static final String LAYER_NAME_IMAGE_ANNOTATION_CHINESE = "cia";
+    private static final String LAYER_NAME_IMAGE_ANNOTATION_ENGLISH = "eia";
+    private static final String LAYER_NAME_TERRAIN = "ter";
+    private static final String LAYER_NAME_TERRAIN_ANNOTATION_CHINESE = "cta";
 
-                public final void run() {
-                    a.initLayer();
-                }
+    private static final SpatialReference SRID_2000 = SpatialReference.create(4490);
+    private static final SpatialReference SRID_MERCATOR = SpatialReference.create(102100);
+    private static final double X_MIN_2000 = -180;
+    private static final double Y_MIN_2000 = -90;
+    private static final double X_MAX_2000 = 180;
+    private static final double Y_MAX_2000 = 90;
 
-                final TianDiTuTiledMapServiceLayer a;
+    private static final double X_MIN_MERCATOR = -20037508.3427892;
+    private static final double Y_MIN_MERCATOR = -20037508.3427892;
+    private static final double X_MAX_MERCATOR = 20037508.3427892;
+    private static final double Y_MAX_MERCATOR = 20037508.3427892;
+    private static final Point ORIGIN_2000 = new Point(-180, 90,SRID_2000);
+    private static final Point ORIGIN_MERCATOR = new Point(-20037508.3427892,20037508.3427892,SRID_MERCATOR);
+    private static final Envelope ENVELOPE_2000 = new Envelope(X_MIN_2000,Y_MIN_2000,X_MAX_2000,Y_MAX_2000,SRID_2000);
+    private static final Envelope ENVELOPE_MERCATOR = new Envelope(X_MIN_MERCATOR,Y_MIN_MERCATOR,X_MAX_MERCATOR,Y_MAX_MERCATOR,SRID_MERCATOR);
 
+    private static final double[] SCALES = {
+            2.958293554545656E8,1.479146777272828E8,
+            7.39573388636414E7, 3.69786694318207E7,
+            1.848933471591035E7, 9244667.357955175,
+            4622333.678977588,2311166.839488794,
+            1155583.419744397, 577791.7098721985,
+            288895.85493609926, 144447.92746804963,
+            72223.96373402482,36111.98186701241,
+            18055.990933506204, 9027.995466753102,
+            4513.997733376551, 2256.998866688275,
+            1128.4994333441375
+    };
+    private static final double[] RESOLUTIONS_MERCATOR = {
+            78271.51696402048, 39135.75848201024,
+            19567.87924100512, 9783.93962050256,
+            4891.96981025128, 2445.98490512564,
+            1222.99245256282, 611.49622628141,
+            305.748113140705, 152.8740565703525,
+            76.43702828517625, 38.21851414258813,
+            19.109257071294063, 9.554628535647032,
+            4.777314267823516, 2.388657133911758,
+            1.194328566955879, 0.5971642834779395,
+            0.298582141738970
+    };
 
-                {
-                    a = TianDiTuTiledMapServiceLayer.this;
-                    //super();
-                }
-            });
-            return;
-        } catch (Exception _ex) {
-        }
-    }
+    private static final double[] RESOLUTIONS_2000 = {
+            0.7031249999891485,0.35156249999999994,
+            0.17578124999999997, 0.08789062500000014,
+            0.04394531250000007, 0.021972656250000007,
+            0.01098632812500002,0.00549316406250001,
+            0.0027465820312500017, 0.0013732910156250009,
+            0.000686645507812499, 0.0003433227539062495,
+            0.00017166137695312503, 0.00008583068847656251,
+            0.000042915344238281406, 0.000021457672119140645,
+            0.000010728836059570307, 0.000005364418029785169
+    };
 
-    protected void initLayer() {
-        this.buildTileInfo();
-//        this.setFullExtent(new Envelope(-180, -90, 180, 90));
-        this.setFullExtent(new Envelope(95, 24, 110, 35));
-        //this.setDefaultSpatialReference(SpatialReference.create(4326));   //CGCS2000
-        this.setDefaultSpatialReference(SpatialReference.create(4326));
-        this.setInitialExtent(new Envelope(95, 24, 110, 35));
-//        珙县数据
-//        Initial Extent:
-//        XMin: 104.69229123103534
-//        YMin: 28.412848313350565
-//        XMax: 104.73474612673695
-//        YMax: 28.437349861942394
-//        Spatial Reference: 4490  (4490)
-//
-//        Full Extent:
-//        XMin: 104.70613118600005
-//        YMin: 28.399988671000074
-//        XMax: 104.72883884500004
-//        YMax: 28.437110965000045
-//        Spatial Reference: 4490  (4490)
-
-        // 龙泉数据
-//        Initial Extent:
-//        XMin: 104.11522135542174
-//        YMin: 30.508012133200157
-//        XMax: 104.31646766210093
-//        YMax: 30.628404078944396
-//        Spatial Reference: 4490  (4490)
-//
-//        Full Extent:
-//        XMin: 104.11522135542175
-//        YMin: 30.49383532271438
-//        XMax: 104.30144337987343
-//        YMax: 30.58248376052007
-//        Spatial Reference: 4490  (4490)
-        this.setInitialExtent(new Envelope(104.11522135542174, 30.508012133200157, 104.31646766210093, 30.628404078944396));
-//        try {
-//            MapData tempItem = ((MapData)ApiConfig.SzMapData.get(this.mUnit));
-//            this.setInitialExtent(new Envelope(tempItem.XMin, tempItem.YMin, tempItem.XMax, tempItem.YMax));
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
-        super.initLayer();
-    }
-
-    public void refresh() {
-        try {
-            getServiceExecutor().submit(new Runnable() {
-
-                public final void run() {
-                    if (a.isInitialized())
-                        try {
-                            a.b();
-                            a.clearTiles();
-                            return;
-                        } catch (Exception exception) {
-                            Log.e("ArcGIS", "Re-initialization of the layer failed.", exception);
-                        }
-                }
-
-                final TianDiTuTiledMapServiceLayer a;
-
-
-                {
-                    a = TianDiTuTiledMapServiceLayer.this;
-                    //super();
-                }
-            });
-            return;
-        } catch (Exception _ex) {
-            return;
-        }
-    }
-
-    final void b()
-            throws Exception {
-
-    }
-
-    @Override
-    protected byte[] getTile(int level, int col, int row) throws Exception {
+    public enum LayerType {
         /**
-         *
-         * */
+         * 天地图矢量墨卡托投影地图服务
+         */
+        TIANDITU_VECTOR_MERCATOR,
+        /**
+         * 天地图矢量墨卡托中文标注
+         */
+        TIANDITU_VECTOR_ANNOTATION_CHINESE_MERCATOR,
+        /**
+         * 天地图矢量墨卡托英文标注
+         */
+        TIANDITU_VECTOR_ANNOTATION_ENGLISH_MERCATOR,
+        /**
+         * 天地图影像墨卡托投影地图服务
+         */
+        TIANDITU_IMAGE_MERCATOR,
+        /**
+         * 天地图影像墨卡托投影中文标注
+         */
+        TIANDITU_IMAGE_ANNOTATION_CHINESE_MERCATOR,
+        /**
+         * 天地图影像墨卡托投影英文标注
+         */
+        TIANDITU_IMAGE_ANNOTATION_ENGLISH_MERCATOR,
+        /**
+         * 天地图地形墨卡托投影地图服务
+         */
+        TIANDITU_TERRAIN_MERCATOR,
+        /**
+         * 天地图地形墨卡托投影中文标注
+         */
+        TIANDITU_TERRAIN_ANNOTATION_CHINESE_MERCATOR,
+        /**
+         * 天地图矢量国家2000坐标系地图服务
+         */
+        TIANDITU_VECTOR_2000,
+        /**
+         * 天地图矢量国家2000坐标系中文标注
+         */
+        TIANDITU_VECTOR_ANNOTATION_CHINESE_2000,
+        /**
+         * 天地图矢量国家2000坐标系英文标注
+         */
+        TIANDITU_VECTOR_ANNOTATION_ENGLISH_2000,
+        /**
+         * 天地图影像国家2000坐标系地图服务
+         */
+        TIANDITU_IMAGE_2000,
+        /**
+         * 天地图影像国家2000坐标系中文标注
+         */
+        TIANDITU_IMAGE_ANNOTATION_CHINESE_2000,
+        /**
+         * 天地图影像国家2000坐标系英文标注
+         */
+        TIANDITU_IMAGE_ANNOTATION_ENGLISH_2000,
+        /**
+         * 天地图地形国家2000坐标系地图服务
+         */
+        TIANDITU_TERRAIN_2000,
+        /**
+         * 天地图地形国家2000坐标系中文标注
+         */
+        TIANDITU_TERRAIN_ANNOTATION_CHINESE_2000
 
-        byte[] result = null;
+    }
+
+    public static WebTiledLayer CreateTianDiTuTiledLayer(LayerType layerType)
+    {
+        WebTiledLayer webTiledLayer = null;
+        String mainUrl = "";
+        String mainName = "";
+        TileInfo mainTileInfo = null;
+        Envelope mainEnvelope = null;
+        boolean mainIs2000 = false;
         try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-
-            URL sjwurl = new URL(this.getTianDiMapUrl(level, row, col));
-            HttpURLConnection httpUrl = null;
-            BufferedInputStream bis = null;
-            byte[] buf = new byte[1024];
-
-            httpUrl = (HttpURLConnection) sjwurl.openConnection();
-            httpUrl.connect();
-            bis = new BufferedInputStream(httpUrl.getInputStream());
-
-            while (true) {
-                int bytes_read = bis.read(buf);
-                if (bytes_read > 0) {
-                    bos.write(buf, 0, bytes_read);
-                } else {
+            switch (layerType) {
+                case TIANDITU_VECTOR_2000:
+                    mainUrl = URL_VECTOR_2000;
+                    mainName = LAYER_NAME_VECTOR;
+                    mainIs2000 = true;
                     break;
-                }
+                case TIANDITU_VECTOR_MERCATOR:
+                    mainUrl = URL_VECTOR_MERCATOR;
+                    mainName = LAYER_NAME_VECTOR;
+                    break;
+                case TIANDITU_IMAGE_2000:
+                    mainUrl = URL_IMAGE_2000;
+                    mainName = LAYER_NAME_IMAGE;
+                    mainIs2000 = true;
+                    break;
+                case TIANDITU_IMAGE_ANNOTATION_CHINESE_2000:
+                    mainUrl = URL_IMAGE_ANNOTATION_CHINESE_2000;
+                    mainName = LAYER_NAME_IMAGE_ANNOTATION_CHINESE;
+                    mainIs2000 = true;
+                    break;
+                case TIANDITU_IMAGE_ANNOTATION_ENGLISH_2000:
+                    mainUrl = URL_IMAGE_ANNOTATION_ENGLISH_2000;
+                    mainName = LAYER_NAME_IMAGE_ANNOTATION_ENGLISH;
+                    mainIs2000 = true;
+                    break;
+                case TIANDITU_IMAGE_ANNOTATION_CHINESE_MERCATOR:
+                    mainUrl = URL_IMAGE_ANNOTATION_CHINESE_MERCATOR;
+                    mainName = LAYER_NAME_IMAGE_ANNOTATION_CHINESE;
+                    break;
+                case TIANDITU_IMAGE_ANNOTATION_ENGLISH_MERCATOR:
+                    mainUrl = URL_IMAGE_ANNOTATION_ENGLISH_MERCATOR;
+                    mainName = LAYER_NAME_IMAGE_ANNOTATION_ENGLISH;
+                    break;
+                case TIANDITU_IMAGE_MERCATOR:
+                    mainUrl = URL_IMAGE_MERCATOR;
+                    mainName = LAYER_NAME_IMAGE;
+                    break;
+                case TIANDITU_VECTOR_ANNOTATION_CHINESE_2000:
+                    mainUrl = URL_VECTOR_ANNOTATION_CHINESE_2000;
+                    mainName = LAYER_NAME_VECTOR_ANNOTATION_CHINESE;
+                    mainIs2000 = true;
+                    break;
+                case TIANDITU_VECTOR_ANNOTATION_ENGLISH_2000:
+                    mainUrl = URL_VECTOR_ANNOTATION_ENGLISH_2000;
+                    mainName = LAYER_NAME_VECTOR_ANNOTATION_ENGLISH;
+                    mainIs2000 = true;
+                    break;
+                case TIANDITU_VECTOR_ANNOTATION_CHINESE_MERCATOR:
+                    mainUrl = URL_VECTOR_ANNOTATION_CHINESE_MERCATOR;
+                    mainName = LAYER_NAME_VECTOR_ANNOTATION_CHINESE;
+                    break;
+                case TIANDITU_VECTOR_ANNOTATION_ENGLISH_MERCATOR:
+                    mainUrl = URL_VECTOR_ANNOTATION_ENGLISH_MERCATOR;
+                    mainName = LAYER_NAME_VECTOR_ANNOTATION_ENGLISH;
+                    break;
+                case TIANDITU_TERRAIN_2000:
+                    mainUrl = URL_TERRAIN_2000;
+                    mainName = LAYER_NAME_TERRAIN;
+                    mainIs2000 = true;
+                    break;
+                case TIANDITU_TERRAIN_ANNOTATION_CHINESE_2000:
+                    mainUrl = URL_TERRAIN_ANNOTATION_CHINESE_2000;
+                    mainName = LAYER_NAME_TERRAIN_ANNOTATION_CHINESE;
+                    mainIs2000 = true;
+                    break;
+                case TIANDITU_TERRAIN_MERCATOR:
+                    mainUrl = URL_TERRAIN_MERCATOR;
+                    mainName = LAYER_NAME_TERRAIN;
+                    break;
+                case TIANDITU_TERRAIN_ANNOTATION_CHINESE_MERCATOR:
+                    mainUrl = URL_TERRAIN_ANNOTATION_CHINESE_MERCATOR;
+                    mainName = LAYER_NAME_TERRAIN_ANNOTATION_CHINESE;
+                    break;
             }
-            ;
-            bis.close();
-            httpUrl.disconnect();
-
-            result = bos.toByteArray();
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            List<LevelOfDetail> mainLevelOfDetail = new ArrayList<LevelOfDetail>();
+            Point mainOrigin = null;
+            if(mainIs2000 == true)
+            {
+                for (int i = minZoomLevel; i <= maxZoomLevel; i++) {
+                    LevelOfDetail item = new LevelOfDetail(i,RESOLUTIONS_2000[i-1],SCALES[i-1]);
+                    mainLevelOfDetail.add(item);
+                }
+                mainEnvelope = ENVELOPE_2000;
+                mainOrigin = ORIGIN_2000;
+            }
+            else
+            {
+                for (int i = minZoomLevel; i <= maxZoomLevel; i++) {
+                    LevelOfDetail item = new LevelOfDetail(i,RESOLUTIONS_MERCATOR[i-1],SCALES[i-1]);
+                    mainLevelOfDetail.add(item);
+                }
+                mainEnvelope = ENVELOPE_MERCATOR;
+                mainOrigin = ORIGIN_MERCATOR;
+            }
+            mainTileInfo = new TileInfo(
+                    DPI,
+                    TileInfo.ImageFormat.PNG24,
+                    mainLevelOfDetail,
+                    mainOrigin,
+                    mainOrigin.getSpatialReference(),
+                    tileHeight,
+                    tileWidth
+            );
+            webTiledLayer = new WebTiledLayer(
+                    mainUrl,
+                    SubDomain,
+                    mainTileInfo,
+                    mainEnvelope);
+            webTiledLayer.setName(mainName);
+            webTiledLayer.loadAsync();
         }
-
-        return result;
+        catch (Exception e)
+        {
+            e.getCause();
+        }
+        return webTiledLayer;
     }
 
-
-    @Override
-    public TileInfo getTileInfo() {
-        return this.tiandituTileInfo;
-    }
-
-    /**
-     *
-     * */
-    private String getTianDiMapUrl(int level, int col, int row) {
-
-        return mUrl + "/tile/" + level + "/" + col + "/" + row + "?token=ZapmAu3mQohbR0V_cti_Vt9ipy1fDb-Nkgo3AWo9NIeKIew99f9bcVvfPelxsgAuu3Cpvdjx7dIFpzTQxJtSXw..";
-    }
-
-    private void buildTileInfo() {
-        Point originalPoint = new Point(-180, 90);
-
-        double[] res = {
-                1.40625,
-                0.703125,
-                0.3515625,
-                0.17578125,
-                0.087890625,
-                0.0439453125,
-                0.02197265625,
-                0.010986328125,
-                0.0054931640625,
-                0.00274658203125,
-                0.001373291015625,
-                0.0006866455078125,
-                0.00034332275390625,
-                0.000171661376953125,
-                8.58306884765629E-05,
-                4.29153442382814E-05,
-                2.14576721191407E-05,
-                1.07288360595703E-05,
-                5.36441802978515E-06,
-                2.68220901489258E-06,
-                1.34110450744629E-06
-        };
-        double[] scale = {
-                400000000,
-                295497598.5708346,
-                147748799.285417,
-                73874399.6427087,
-                36937199.8213544,
-                18468599.9106772,
-                9234299.95533859,
-                4617149.97766929,
-                2308574.98883465,
-                1154287.49441732,
-                577143.747208662,
-                288571.873604331,
-                144285.936802165,
-                72142.9684010827,
-                36071.4842005414,
-                18035.7421002707,
-                9017.87105013534,
-                4508.93552506767,
-                2254.467762533835,
-                1127.2338812669175,
-                563.616940
-        };
-        int levels = 21;
-        int dpi = 96;
-        int tileWidth = 256;
-        int tileHeight = 256;
-        this.tiandituTileInfo = new com.esri.android.map.TiledServiceLayer.TileInfo(originalPoint, scale, res, levels, dpi, tileWidth, tileHeight);
-        this.setTileInfo(this.tiandituTileInfo);
-    }
 
 }

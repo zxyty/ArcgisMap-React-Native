@@ -12,6 +12,7 @@ import com.facebook.react.uimanager.ViewManager;
 import com.facebook.soloader.SoLoader;
 import com.sisdanger.maps.ArcgisMapView;
 import com.sisdanger.maps.MapImageBtn;
+import com.sisdanger.maps.components.MapView;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,7 +36,8 @@ public class MainApplication extends Application implements ReactApplication {
                           ReactApplicationContext reactContext) {
                       return Arrays.<ViewManager>asList(
                               new ArcgisMapView(),
-                              new MapImageBtn()
+                              new MapImageBtn(),
+                              new MapView()
                       );
                   }
 

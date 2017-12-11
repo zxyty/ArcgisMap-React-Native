@@ -1,245 +1,197 @@
 package com.sisdanger.maps;
 
-import android.content.Context;
 import android.graphics.Color;
 import android.view.MotionEvent;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ListAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.esri.android.map.Callout;
-import com.esri.android.map.GraphicsLayer;
-import com.esri.android.map.MapOnTouchListener;
-import com.esri.android.map.MapView;
-import com.esri.android.map.event.OnSingleTapListener;
-import com.esri.core.geometry.Geometry;
-import com.esri.core.geometry.GeometryEngine;
-import com.esri.core.geometry.Line;
-import com.esri.core.geometry.Point;
-import com.esri.core.geometry.Polygon;
-import com.esri.core.geometry.Polyline;
-import com.esri.core.map.Graphic;
-import com.esri.core.symbol.SimpleFillSymbol;
-import com.esri.core.symbol.SimpleLineSymbol;
-import com.esri.core.symbol.SimpleMarkerSymbol;
-import com.facebook.react.ReactActivity;
+import com.esri.arcgisruntime.geometry.GeodeticCurveType;
+import com.esri.arcgisruntime.geometry.Geometry;
+import com.esri.arcgisruntime.geometry.GeometryEngine;
+import com.esri.arcgisruntime.geometry.Point;
+import com.esri.arcgisruntime.geometry.PointCollection;
+import com.esri.arcgisruntime.geometry.Polygon;
+import com.esri.arcgisruntime.geometry.Polyline;
+import com.esri.arcgisruntime.geometry.SpatialReference;
+import com.esri.arcgisruntime.geometry.SpatialReferences;
+import com.esri.arcgisruntime.mapping.view.Callout;
+import com.esri.arcgisruntime.mapping.view.Graphic;
+import com.esri.arcgisruntime.mapping.view.GraphicsOverlay;
+import com.esri.arcgisruntime.mapping.view.MapView;
+import com.esri.arcgisruntime.symbology.SimpleFillSymbol;
+import com.esri.arcgisruntime.symbology.SimpleLineSymbol;
+import com.esri.arcgisruntime.symbology.SimpleMarkerSymbol;
+import com.esri.arcgisruntime.symbology.SimpleRenderer;
+import com.facebook.react.uimanager.ThemedReactContext;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
- * Created by zxy on 2017/12/7.
+ * Created by zxy on 2017/12/11.
  */
 
-public class MapTouchListener extends MapOnTouchListener {
+public class MapTouchListener {
+    private MapView _mapView = null;
 
-    private Context _context;
+    private SimpleMarkerSymbol pointSymbol = null;
+    private SimpleFillSymbol fillSymbol = null;
+    private SimpleLineSymbol lineSymbol = null;
+    private String geoType = "";                    // 绘制类型
+    private String currToastText = "";
 
-    private ArrayList<Point> drawPoints = null; // 绘制点
-    private Point ptStart = null;               // 绘制开始点
-    private Point ptEnd = null;                 // 绘制结束点
-    private Point ptPrevious = null;            // 记录绘制之前的点
-    private Geometry.Type drawGeoType = null;   // 绘制类型
-    private String currToastText = null;        // 绘制描述
+    private Point ptStart = null;                   //起点
+    private Point ptPrevious = null;                //上一个点
+    private PointCollection drawPoints = null;     //记录全部点
 
-    // static
-    static GraphicsLayer drawLayer = null;              // 绘制图层
-    static MapView targetMap = null;                    // MapView
-    static SimpleLineSymbol lineSymbol = null;          // 绘制线样式
-    static SimpleMarkerSymbol markerSymbol = null;      //
-    static SimpleFillSymbol fillSymbol = null;          // 绘制区域填充样式
+    public GraphicsOverlay drawOverlay = null;      // 绘制层
 
+    private ThemedReactContext _context = null;
 
-
-    public MapTouchListener(Context context, MapView view) {
-        super(context, view);
+    public MapTouchListener(MapView mapView, ThemedReactContext context) {
+        _mapView = mapView;
         _context = context;
-        targetMap = view;
 
-        fillSymbol = new SimpleFillSymbol(Color.argb(100, 0, 225, 255));
-        fillSymbol.setOutline(new SimpleLineSymbol(Color.TRANSPARENT, 0));
-        markerSymbol = new SimpleMarkerSymbol(Color.BLUE, 10, SimpleMarkerSymbol.STYLE.DIAMOND);
-        lineSymbol = new SimpleLineSymbol(Color.YELLOW, 3);
+        pointSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.Style.DIAMOND, Color.RED, 10);
 
-        drawPoints = new ArrayList<Point>();
+        fillSymbol = new SimpleFillSymbol(SimpleFillSymbol.Style.SOLID, Color.argb(100, 0, 255, 255), null);
+        fillSymbol.setOutline(new SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, Color.BLUE, 3));
+
+        lineSymbol = new SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, Color.BLUE, 3);
+
+        drawOverlay = new GraphicsOverlay();
+        drawPoints = new PointCollection(SpatialReference.create(4490));
+
+        _mapView.getGraphicsOverlays().add(drawOverlay);
     }
 
-    // 清除绘制信息
-    public void clearDrawLayer() {
-        drawPoints.clear();          // 绘制点
-        ptStart = null;               // 绘制开始点
-        ptEnd = null;                 // 绘制结束点
-        ptPrevious = null;            // 记录绘制之前的点
-        drawGeoType = null;          // 绘制类型
+    // 单击
+    public void onSingleTapUp(MotionEvent e) {
+        android.graphics.Point screenPoint = new android.graphics.Point(Math.round(e.getX()), Math.round(e.getY()));
+        Point clickPoint = _mapView.screenToLocation(screenPoint);
 
-        targetMap.getCallout().hide();
-        if (drawLayer != null) {
-            drawLayer.removeAll();
-            targetMap.removeLayer(drawLayer);
-            drawLayer = null;
+        if (_mapView == null || drawOverlay == null) {
+            return;
         }
-    }
 
-    // 根据用户选择设置当前绘制的几何图形类型
-    public void setType(String geometryType) {
-        if(geometryType.equalsIgnoreCase("Point"))
-            this.drawGeoType = Geometry.Type.POINT;
-        else if(geometryType.equalsIgnoreCase("Polyline"))
-            this.drawGeoType = Geometry.Type.POLYLINE;
-        else if(geometryType.equalsIgnoreCase("Polygon"))
-            this.drawGeoType = Geometry.Type.POLYGON;
-    }
-
-    public void setType(Geometry.Type type) {
-        this.drawGeoType = type;
-    }
-
-    //  得到当前选择的geoType
-    public Geometry.Type getType() {
-        return this.drawGeoType;
-    }
-
-    public void createDrawLayer() {
-        try {
-            if (targetMap != null) {
-
-                drawLayer = new GraphicsLayer();
-                targetMap.addLayer(drawLayer);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-
-    @Override
-    public boolean onSingleTap(MotionEvent point) {
-
-//        return super.onSingleTap(point);
-
-        if (targetMap == null || drawLayer == null) {
-            return true;
-        }
         // 当前点
-        this.ptPrevious = this.ptStart;
-        Point ptCurrent = targetMap.toMapPoint(new Point(point.getX(), point.getY()));
-        this.ptStart = ptCurrent;
-        this.drawPoints.add(ptCurrent);
+        ptPrevious = clickPoint;
+        drawPoints.add(clickPoint);
 
         //直接画点
-        if (this.drawGeoType == Geometry.Type.POINT) {
-            // 画一个新的点在地图上
-            return true;
-            // 画线
-        } else if (this.drawGeoType != null){
-            // 清除之前
-            drawLayer.removeAll();
-            // 加入当前点
-            Graphic graphic = new Graphic(ptCurrent, this.markerSymbol);
-            MapTouchListener.drawLayer.addGraphic(graphic);
+        if (geoType == "Point") {
 
-            // 如果是画线
-            if (this.drawGeoType == Geometry.Type.POLYLINE) {
-                Polyline polyline = new Polyline();
-                for (int i = 1; i < this.drawPoints.size(); i++) {
-                    Point startPoint = this.drawPoints.get(i - 1);
-                    Point endPoint = this.drawPoints.get(i);
-                    Line line = new Line();
-                    line.setStart(startPoint);
-                    line.setEnd(endPoint);
-                    polyline.addSegment(line, false);
+        } else {
+            // 重绘需要清除之前的点
+            drawOverlay.getGraphics().clear();
+//            // 如果是画线
+            if (geoType == "Polyline") {
+                if (drawPoints.size() > 1) {
+                    Polyline polyline = new Polyline(drawPoints);
+                    Graphic g = new Graphic(polyline, lineSymbol);
+                    SimpleRenderer lineRenderer = new SimpleRenderer(lineSymbol);
+                    drawOverlay.setRenderer(lineRenderer);
+                    drawOverlay.getGraphics().add(g);
+
+
+                    // 计算当前线段的长度
+                    double result = GeometryEngine.lengthGeodetic(polyline, null, GeodeticCurveType.GEODESIC);
+                    currToastText = String.format("%.1f", result) + " 米";
                 }
-                Graphic g = new Graphic(polyline, this.lineSymbol);
-                drawLayer.addGraphic(g);
-                // 计算当前线段的长度
-                GeometryEngine geometryEngine = new GeometryEngine();
-                double result = GeometryEngine.geodesicLength(polyline, targetMap.getSpatialReference(), null);
+                // 添加此点
+                Graphic graphic = new Graphic(clickPoint);
+                SimpleRenderer pointRenderer = new SimpleRenderer(pointSymbol);
+                drawOverlay.setRenderer(pointRenderer);
+                drawOverlay.getGraphics().add(graphic);
 
-                currToastText = String.format("%.1f", result) + " 米";
-            }
-            // 绘制多边形
-            else  if (this.drawGeoType == Geometry.Type.POLYGON) {
+            } else if (geoType == "Polygon") {
 
-                // 1、连线
-                Polyline polyline = new Polyline();
-                for (int i = 1; i < this.drawPoints.size(); i++) {
-                    Point startPoint = this.drawPoints.get(i - 1);
-                    Point endPoint = this.drawPoints.get(i);
-                    Line line = new Line();
-                    line.setStart(startPoint);
-                    line.setEnd(endPoint);
-                    polyline.addSegment(line, false);
+                // 如果有两个点以上 连成线
+                if (drawPoints.size() >= 2) {
+                    Polyline polyline = new Polyline(drawPoints);
+                    Graphic g = new Graphic(polyline, lineSymbol);
+//                    SimpleRenderer lineRenderer = new SimpleRenderer(lineSymbol);
+//                    drawOverlay.setRenderer(lineRenderer);
+                    drawOverlay.getGraphics().add(g);
                 }
-                // 补充最后一个点与起点重合
-                if (this.drawPoints.size() >= 3) {
-                    Point endPoint = this.drawPoints.get(0);
-                    Point startPoint = this.drawPoints.get((this.drawPoints.size() - 1));
-                    Line line = new Line();
-                    line.setStart(startPoint);
-                    line.setEnd(endPoint);
-                    polyline.addSegment(line, false);
+
+                if (drawPoints.size() > 2) {
+                    // 连成面
+                    Polygon polygon = new Polygon(drawPoints);
+                    Graphic g = new Graphic(polygon, fillSymbol);
+//                    SimpleRenderer fillRenderer = new SimpleRenderer(fillSymbol);
+//                    drawOverlay.setRenderer(fillRenderer);
+                    drawOverlay.getGraphics().add(g);
+                    // 计算当前线段的长度
+                    double result = GeometryEngine.areaGeodetic(polygon, null, GeodeticCurveType.GEODESIC);
+                    currToastText = getAreaString(result);
                 }
-                Graphic g = new Graphic(polyline, this.lineSymbol);
-                drawLayer.addGraphic(g);
 
-                // 2、填充
-                Polygon polygon = new Polygon();
-                for (int i = 1; i < this.drawPoints.size(); i++) {
-                    Point startPoint = this.drawPoints.get(i - 1);
-                    Point endPoint = this.drawPoints.get(i);
-                    Line line = new Line();
-                    line.setStart(startPoint);
-                    line.setEnd(endPoint);
-                    polygon.addSegment(line, false);
-                }
-                Graphic pg = new Graphic(polygon, fillSymbol);
-                drawLayer.addGraphic(pg);
-
-                //计算当前面积
-                GeometryEngine geometryEngine = new GeometryEngine();
-                double result = GeometryEngine.geodesicArea(polygon, targetMap.getSpatialReference(), null);
-
-                currToastText = getAreaString(result);
+                // 添加此点
+                Graphic graphic = new Graphic(clickPoint, pointSymbol);
+//                SimpleRenderer pointRenderer = new SimpleRenderer(pointSymbol);
+//                drawOverlay.setRenderer(pointRenderer);
+                drawOverlay.getGraphics().add(graphic);
             }
         }
-        return true;
     }
 
-    @Override
-    public boolean onDoubleTap(MotionEvent point) {
-        try {
-            if (drawLayer == null || targetMap == null) {
-                return true;
-            }
-            if (this.drawGeoType != Geometry.Type.POINT && this.drawGeoType != null) {
-                // create a textview for the callout
-                TextView calloutContent = new TextView(_context);
-                calloutContent.setTextColor(Color.BLACK);
-                calloutContent.setSingleLine();
-                calloutContent.setText("测量结果为: " + currToastText);
-
-                // get callout, set content and show
-                Callout mCallout = targetMap.getCallout();
-                mCallout.setCoordinates(this.ptStart);
-                mCallout.setContent(calloutContent);
-                mCallout.show();
-                Toast.makeText(targetMap.getContext(), currToastText, Toast.LENGTH_SHORT).show();
-            } else if (this.drawGeoType == Geometry.Type.POINT){
-                // 纪录标选的坐标点
-//                if (this.ptStart != null)
-//                {
-//                    MapTouchListener.biaoXuanResult[0] = this.ptStart.getX();
-//                    MapTouchListener.biaoXuanResult[1] = this.ptStart.getY();
-//                }
-            }
-
-            this.ptStart = null;
-            this.ptPrevious = null;
-            this.drawPoints.clear();
-            this.drawPoints = new ArrayList<Point>();
-        } catch (Exception e) {
-            e.printStackTrace();
+    // 双击
+    public void onDoubleTapEvent(MotionEvent e) {
+        if (drawOverlay == null || _mapView == null) {
+            return;
         }
-        return false;
+
+        if (geoType != "" && geoType != "Point" && drawPoints.size() >= 2) {
+            TextView calloutContent = new TextView(_mapView.getContext());
+            calloutContent.setTextColor(Color.BLACK);
+            calloutContent.setSingleLine();
+            calloutContent.setText("测量结果为: " + currToastText);
+
+            // get callout, set content and show
+            Callout mCallout = _mapView.getCallout();
+            mCallout.setLocation(ptPrevious);
+            mCallout.setContent(calloutContent);
+            mCallout.show();
+
+            if (mCallout.isShowing()) {
+                Toast.makeText(_mapView.getContext(), currToastText, Toast.LENGTH_LONG).show();
+            }
+
+        }
+
+        drawPoints.clear();
+    }
+
+    public void clearDrawLayer() {
+        if (drawOverlay != null && drawOverlay.getGraphics() != null) {
+            drawOverlay.getGraphics().clear();
+        }
+        if (drawPoints != null) {
+            drawPoints.clear();
+        }
+    }
+
+    public void setGeoType(String type) {
+        switch (type) {
+            case "Point":
+                geoType = "Point";
+                break;
+            case "Polyline":
+                geoType = "Polyline";
+                break;
+            case "Polygon":
+                geoType = "Polygon";
+                break;
+            default:
+                geoType = "";
+                break;
+        }
     }
 
     private String getAreaString(double dValue){

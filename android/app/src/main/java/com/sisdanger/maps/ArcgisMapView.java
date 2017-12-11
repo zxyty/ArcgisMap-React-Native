@@ -1,26 +1,32 @@
 package com.sisdanger.maps;
 
-import android.annotation.TargetApi;
-import android.os.Build;
+import android.graphics.Color;
 import android.support.annotation.Nullable;
-import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
+import android.widget.TextView;
 
-import com.esri.android.map.MapView;
-import com.esri.core.geometry.Geometry;
+import com.esri.arcgisruntime.geometry.Point;
+import com.esri.arcgisruntime.geometry.SpatialReferences;
+import com.esri.arcgisruntime.layers.WebTiledLayer;
+import com.esri.arcgisruntime.mapping.ArcGISMap;
+import com.esri.arcgisruntime.mapping.Basemap;
+import com.esri.arcgisruntime.mapping.view.Callout;
+import com.esri.arcgisruntime.mapping.view.DefaultMapViewOnTouchListener;
+import com.esri.arcgisruntime.mapping.view.Graphic;
+import com.esri.arcgisruntime.mapping.view.GraphicsOverlay;
+import com.esri.arcgisruntime.mapping.view.MapView;
+import com.esri.arcgisruntime.symbology.SimpleMarkerSymbol;
+import com.esri.arcgisruntime.symbology.SimpleRenderer;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.uimanager.SimpleViewManager;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.ViewGroupManager;
-import com.facebook.react.uimanager.annotations.ReactProp;
-import com.sisdanger.R;
-import com.sisdanger.maps.TianDiTuTiledMapServiceLayer;
+import com.facebook.react.uimanager.events.RCTEventEmitter;
 
 import java.util.Map;
 
@@ -28,12 +34,14 @@ import java.util.Map;
  * Created by zxy on 2017/12/6.
  */
 
-public class ArcgisMapView extends SimpleViewManager<MapView> {
+public class ArcgisMapView extends ViewGroupManager<MapView> {
     private ThemedReactContext _context;
+
+    private MapTouchListener mapTouchListener = null;
 
     public static final String REACT_CLASS = "RCTArcgisMapView";
     public MapView _MapView;
-    public MapTouchListener _MapTouchListener;
+//    public MapTouchListener _MapTouchListener;
 
     @Override
     public String getName() {
@@ -44,11 +52,63 @@ public class ArcgisMapView extends SimpleViewManager<MapView> {
     protected MapView createViewInstance(ThemedReactContext reactContext) {
         _context = reactContext;
         _MapView = new MapView(reactContext);
-        TianDiTuTiledMapServiceLayer mapBase = new TianDiTuTiledMapServiceLayer("http://www.scgis.net.cn/iMap/iMapServer/DefaultRest/services/newtianditudlg", "");
-        _MapView.addLayer(mapBase);
+        //TianDiTuTiledMapServiceLayer mapBase = new TianDiTuTiledMapServiceLayer("http://www.scgis.net.cn/iMap/iMapServer/DefaultRest/services/newtianditudlg", "");
 
+        // 构造天地图 服务
+        WebTiledLayer webTiledLayer = TianDiTuTiledMapServiceLayer.CreateTianDiTuTiledLayer(TianDiTuTiledMapServiceLayer.LayerType.TIANDITU_VECTOR_2000);
+        Basemap tdtBasemap = new Basemap(webTiledLayer);
+        WebTiledLayer webTiledLayer1 = TianDiTuTiledMapServiceLayer.CreateTianDiTuTiledLayer(TianDiTuTiledMapServiceLayer.LayerType.TIANDITU_VECTOR_ANNOTATION_CHINESE_2000);
+        tdtBasemap.getBaseLayers().add(webTiledLayer1);
+        ArcGISMap arcGISMap = new ArcGISMap();
+        _MapView.setMap(arcGISMap);
+        _MapView.getMap().setBasemap(tdtBasemap);
+
+        mapTouchListener = new MapTouchListener(_MapView, _context);
+
+        _MapView.setOnTouchListener(new DefaultMapViewOnTouchListener(_context, _MapView){
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+                mapTouchListener.onSingleTapUp(e);
+                return super.onSingleTapUp(e);
+            }
+
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                android.graphics.Point screenPoint = new android.graphics.Point(Math.round(e.getX()), Math.round(e.getY()));
+                Point clickPoint = _MapView.screenToLocation(screenPoint);
+                mapTouchListener.onDoubleTapEvent(e);
+
+                WritableMap map = Arguments.createMap();
+                map.putDouble("x", clickPoint.getX());
+                map.putDouble("y", clickPoint.getY());
+                map.putString("event", "onDoubleTap");
+                // "topChange"事件在JS端映射到"onChange"，参考UIManagerModuleConstants.java
+                _context.getJSModule(RCTEventEmitter.class).receiveEvent(
+                        _MapView.getId(),
+                        "topChange",
+                        map
+                );
+                return super.onDoubleTapEvent(e);
+            }
+        });
         // 注册点击事件
-        _MapTouchListener = new MapTouchListener(_context, _MapView);
+
+        // 添加标注
+        // point graphic
+//        Point pointGeometry = new Point(40e5, 40e5, SpatialReferences.getWebMercator());
+//        // red diamond point symbol
+//        SimpleMarkerSymbol pointSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.Style.DIAMOND, Color.RED, 10);
+//        // create graphic for point
+//        Graphic pointGraphic = new Graphic(pointGeometry);
+//        // create a graphic overlay for the point
+//        GraphicsOverlay pointGraphicOverlay = new GraphicsOverlay();
+//        // create simple renderer
+//        SimpleRenderer pointRenderer = new SimpleRenderer(pointSymbol);
+//        pointGraphicOverlay.setRenderer(pointRenderer);
+//        // add graphic to overlay
+//        pointGraphicOverlay.getGraphics().add(pointGraphic);
+//        // add graphics overlay to the MapView
+//        _MapView.getGraphicsOverlays().add(pointGraphicOverlay);
         return _MapView;
     }
 
@@ -109,41 +169,45 @@ public class ArcgisMapView extends SimpleViewManager<MapView> {
     public void receiveCommand(final MapView view, int commandId, @Nullable ReadableArray args) {
         switch (commandId) {
             case COMMAND_ZOOMIN: {
-                view.zoomin(true);
+                double currZoomScale = view.getMapScale();
+                view.setViewpointScaleAsync(currZoomScale * 0.5);
+//                view.zoomin(true);
             }
             break;
             case COMMAND_ZOOMOUT: {
-                view.zoomout(false);
+                double currZoomScale = view.getMapScale();
+                view.setViewpointScaleAsync(currZoomScale * 2);
             }
             break;
             case COMMAND_BIAOXUAN: {
-                view.zoomin(true);
+//                view.zoomin(true);
             }
             break;
             case COMMAND_DINGWEI: {
-                view.zoomout(false);
+//                view.zoomout(false);
             }
             break;
             case COMMAND_CLEAR: {
-                view.zoomin(true);
+//                view.zoomin(true);
             }
             break;
             case COMMAND_LENGTH: {
-//                view.zoomout(false);
-                _MapTouchListener.clearDrawLayer();
-                _MapTouchListener.createDrawLayer();
-
-                // 设置激活 画线
-                _MapTouchListener.setType(Geometry.Type.POLYLINE);
+                mapTouchListener.clearDrawLayer();
+//
+//                // 设置激活 画线
+                mapTouchListener.setGeoType("Polyline");
             }
             break;
             case COMMAND_AREA: {
-//                view.zoomin(true);
-                _MapTouchListener.clearDrawLayer();
-                _MapTouchListener.createDrawLayer();
-
-                // 设置激活 画线
-                _MapTouchListener.setType(Geometry.Type.POLYGON);
+//                _MapTouchListener.clearDrawLayer();
+//                _MapTouchListener.createDrawLayer();
+//
+//                // 设置激活 画线
+//                _MapTouchListener.setType(Geometry.Type.POLYGON);
+                mapTouchListener.clearDrawLayer();
+//
+//                // 设置激活 画线
+                mapTouchListener.setGeoType("Polygon");
             }
             break;
         }

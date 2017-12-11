@@ -5,5 +5,5 @@ export default MapView
 export {
   MapView,
   RCTArcgisMapView,
-  ImageButton
+  ImageButton,
 }

@@ -21,11 +21,17 @@ import PropTypes from 'prop-types';
 // 注册原生Arcgis组件
 class RctMapView extends BaseComponent {
   static propTypes = {
-    ...View.propTypes
-  }
+    ...View.propTypes,
 
+    onDoubleTap: PropTypes.func,
+  }
+  _onChange = (event) => {
+    if (this.props.onDoubleTap && event.nativeEvent.event === 'onDoubleTap') {
+      this.props.onDoubleTap(event.nativeEvent);
+    }
+  }
   render() {
-    return <RCTArcgisMapView {...this.props} />
+    return <RCTArcgisMapView {...this.props} onChange={this._onChange} />
   }
 
   name = 'RCTArcgisMapView'
@@ -56,6 +62,9 @@ class MapView extends Component {
             left: 0,
             right: 0,
             height: '100%'
+          }}
+          onDoubleTap={(e) => {
+            console.log(e);
           }}
         >
         </RctMapView>
@@ -167,9 +176,9 @@ class MapView extends Component {
             this.refs.mapview._sendCommand('area', null);
           }}
         >
-        <Image
-          source={require('./images/maparea.png')}
-        />
+          <Image
+            source={require('./images/maparea.png')}
+          />
         </TouchableHighlight>
       </View>
     );
