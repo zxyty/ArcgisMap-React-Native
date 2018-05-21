@@ -1,6 +1,7 @@
 package com.sisdanger.maps;
 
 import android.graphics.Color;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -17,6 +18,9 @@ import com.esri.arcgisruntime.geometry.Polygon;
 import com.esri.arcgisruntime.geometry.Polyline;
 import com.esri.arcgisruntime.geometry.SpatialReference;
 import com.esri.arcgisruntime.geometry.SpatialReferences;
+import com.esri.arcgisruntime.mapping.GeoElement;
+import com.esri.arcgisruntime.mapping.popup.Popup;
+import com.esri.arcgisruntime.mapping.popup.PopupDefinition;
 import com.esri.arcgisruntime.mapping.view.Callout;
 import com.esri.arcgisruntime.mapping.view.Graphic;
 import com.esri.arcgisruntime.mapping.view.GraphicsOverlay;
@@ -31,6 +35,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by zxy on 2017/12/11.
@@ -148,7 +153,8 @@ public class MapTouchListener {
         }
 
         if (geoType != "" && geoType != "Point" && drawPoints.size() >= 2) {
-            TextView calloutContent = new TextView(_mapView.getContext());
+            TextView calloutContent = new TextView(_context.getApplicationContext());
+
             calloutContent.setTextColor(Color.BLACK);
             calloutContent.setSingleLine();
             calloutContent.setText("测量结果为: " + currToastText);
@@ -160,11 +166,10 @@ public class MapTouchListener {
             mCallout.show();
 
             if (mCallout.isShowing()) {
-                Toast.makeText(_mapView.getContext(), currToastText, Toast.LENGTH_LONG).show();
+                Toast.makeText(_context.getApplicationContext(), currToastText, Toast.LENGTH_LONG).show();
             }
 
         }
-
         drawPoints.clear();
     }
 

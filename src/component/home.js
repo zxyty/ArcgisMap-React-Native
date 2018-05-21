@@ -28,12 +28,12 @@ class Home extends Component {
             <MapView style={{
                 position: 'relative'
             }}>
-                <Text style={{
+                {/* <Text style={{
                     position: 'absolute',
                     left: 0,
                     top: 0,
                     zIndex: 999
-                }}>{htmlStr}</Text>
+                }}>{htmlStr}</Text> */}
             </MapView>
         );
     }

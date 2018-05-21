@@ -1,29 +1,19 @@
 package com.sisdanger.maps;
 
-import android.graphics.Color;
 import android.support.annotation.Nullable;
 import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.TextView;
 
 import com.esri.arcgisruntime.geometry.Point;
-import com.esri.arcgisruntime.geometry.SpatialReferences;
 import com.esri.arcgisruntime.layers.WebTiledLayer;
 import com.esri.arcgisruntime.mapping.ArcGISMap;
 import com.esri.arcgisruntime.mapping.Basemap;
-import com.esri.arcgisruntime.mapping.view.Callout;
 import com.esri.arcgisruntime.mapping.view.DefaultMapViewOnTouchListener;
-import com.esri.arcgisruntime.mapping.view.Graphic;
-import com.esri.arcgisruntime.mapping.view.GraphicsOverlay;
 import com.esri.arcgisruntime.mapping.view.MapView;
-import com.esri.arcgisruntime.symbology.SimpleMarkerSymbol;
-import com.esri.arcgisruntime.symbology.SimpleRenderer;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.common.MapBuilder;
-import com.facebook.react.uimanager.SimpleViewManager;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.ViewGroupManager;
 import com.facebook.react.uimanager.events.RCTEventEmitter;
@@ -41,7 +31,6 @@ public class ArcgisMapView extends ViewGroupManager<MapView> {
 
     public static final String REACT_CLASS = "RCTArcgisMapView";
     public MapView _MapView;
-//    public MapTouchListener _MapTouchListener;
 
     @Override
     public String getName() {
@@ -91,25 +80,12 @@ public class ArcgisMapView extends ViewGroupManager<MapView> {
                 return super.onDoubleTapEvent(e);
             }
         });
-        // 注册点击事件
-
-        // 添加标注
-        // point graphic
-//        Point pointGeometry = new Point(40e5, 40e5, SpatialReferences.getWebMercator());
-//        // red diamond point symbol
-//        SimpleMarkerSymbol pointSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.Style.DIAMOND, Color.RED, 10);
-//        // create graphic for point
-//        Graphic pointGraphic = new Graphic(pointGeometry);
-//        // create a graphic overlay for the point
-//        GraphicsOverlay pointGraphicOverlay = new GraphicsOverlay();
-//        // create simple renderer
-//        SimpleRenderer pointRenderer = new SimpleRenderer(pointSymbol);
-//        pointGraphicOverlay.setRenderer(pointRenderer);
-//        // add graphic to overlay
-//        pointGraphicOverlay.getGraphics().add(pointGraphic);
-//        // add graphics overlay to the MapView
-//        _MapView.getGraphicsOverlays().add(pointGraphicOverlay);
         return _MapView;
+    }
+
+    @Override
+    public void addView(MapView parent, View child, int index) {
+        super.addView(parent, child, index);
     }
 
 //    @ReactProp(name = "enableTool")
